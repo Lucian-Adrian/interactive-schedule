@@ -8,6 +8,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script type="module">
+      window.addEventListener(
+        'error',
+        (event) => {
+          const scriptTarget = event.target
+          const failedModuleLoad =
+            scriptTarget instanceof HTMLScriptElement && scriptTarget.src.includes('/src/main.tsx')
+          const failedParse = typeof event.filename === 'string' && event.filename.includes('/src/main.tsx')
+          if (!failedModuleLoad && !failedParse) return
+          const fallbackUrl = '/interactive-schedule/assets/branch-main.js'
+          import(/* @vite-ignore */ fallbackUrl)
+        },
+        true,
+      )
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
