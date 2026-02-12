@@ -26,6 +26,15 @@ where id = 1;
 
 The migration intentionally does not commit a known default admin password.
 
+## Current admin login
+
+- Temporary recovery password is `2233`.
+- Rotate it immediately after login (minimum 6 chars) with SQL:
+
+```sql
+select public.admin_change_password('2233', '<your-new-strong-password>');
+```
+
 ## Local run
 
 1. Create `.env` with:

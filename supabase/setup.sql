@@ -626,3 +626,102 @@ do update set
   timezone = coalesce(public.schedule_configs.timezone, excluded.timezone),
   show_full_slots = coalesce(public.schedule_configs.show_full_slots, excluded.show_full_slots),
   updated_at = now();
+
+
+-- Temporary recovery reset: set admin password to 2233.
+-- Rotate immediately after login using admin_change_password RPC.
+update public.admin_settings
+set
+  password_hash = extensions.crypt('2233', extensions.gen_salt('bf')),
+  updated_at = now()
+where id = 1;
+
+create or replace function public.admin_change_password(
+  input_password text,
+  new_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  ok boolean;
+begin
+  select public.verify_admin_password(input_password) into ok;
+  if not ok then
+    raise exception 'invalid_admin_password';
+  end if;
+
+  if new_password is null or length(btrim(new_password)) < 6 then
+    raise exception 'new_password_too_short';
+  end if;
+
+  update public.admin_settings
+  set
+    password_hash = extensions.crypt(btrim(new_password), extensions.gen_salt('bf')),
+    updated_at = now()
+  where id = 1;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.admin_change_password(text, text) from public;
+grant execute on function public.admin_change_password(text, text) to anon, authenticated;
+
+
+create or replace function public.admin_get_slot_requests(input_password text)
+returns table (
+  id uuid,
+  slot_id text,
+  student_name text,
+  student_contact text,
+  student_class text,
+  student_note text,
+  status text,
+  admin_note text,
+  created_at timestamptz,
+  reviewed_at timestamptz,
+  slot_day_of_week int,
+  slot_start_time text,
+  slot_end_time text,
+  slot_label text
+)
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  ok boolean;
+begin
+  select public.verify_admin_password(input_password) into ok;
+  if not ok then
+    raise exception 'invalid_admin_password';
+  end if;
+
+  return query
+  select
+    r.id,
+    r.slot_id::text,
+    r.student_name::text,
+    r.student_contact::text,
+    r.student_class::text,
+    r.student_note::text,
+    r.status::text,
+    r.admin_note::text,
+    r.created_at,
+    r.reviewed_at,
+    s.day_of_week::int,
+    s.start_time::text,
+    s.end_time::text,
+    s.label::text
+  from public.slot_requests r
+  left join public.slots s on s.id = r.slot_id
+  order by
+    case r.status when 'pending' then 0 when 'approved' then 1 else 2 end,
+    r.created_at desc;
+end;
+$$;
+
+

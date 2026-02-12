@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import clsx from 'clsx'
-import { toPng } from 'html-to-image'
 import { getDefaultTimezone, parsePrefsFromUrl, setPrefsToUrl } from '@/lib/urlState'
 import { type ScheduleConfig, type Slot, type SlotRequest, SlotStatus } from '@/lib/types'
 import { api } from '@/lib/api'
@@ -212,6 +211,7 @@ export function App() {
 
   const downloadImage = useCallback(async () => {
     if (!shareCardRef.current) return
+    const { toPng } = await import('html-to-image')
     const dataUrl = await toPng(shareCardRef.current, {
       cacheBust: true,
       pixelRatio: Math.max(2, window.devicePixelRatio || 1),
@@ -483,7 +483,7 @@ export function App() {
   }, [])
 
   return (
-    <div>
+    <div className="appShell">
       <div className="header">
         <div className="headerInner">
           <div className="titleBlock">
@@ -640,7 +640,7 @@ export function App() {
 
         {showSchedule ? (
           <>
-            <section className="scheduleGrid" aria-label={t('schedule')}>
+            <section className="scheduleGrid calendarSurface" aria-label={t('schedule')}>
               {dayLabels.map((d, idx) => {
                 const daySlots = slotsByDay.get(idx) ?? []
                 return (
@@ -663,7 +663,7 @@ export function App() {
               })}
             </section>
 
-            <section className="mobileOnly" aria-label={t('schedule')}>
+            <section className="mobileOnly calendarSurface" aria-label={t('schedule')}>
               <div className="dayTabs" role="tablist" aria-label={t('days')}>
                 {dayLabels.map((d, idx) => (
                   <button
@@ -841,35 +841,32 @@ function AdminLoginModal(props: {
             {t('close')}
           </button>
         </div>
-        <div className="slotMeta">{t('adminHint')}</div>
-        <div className="slotMeta">{t('adminShortcut')}</div>
-        <input
-          value={props.adminPassword}
-          onChange={(e) => props.onChangePassword(e.target.value)}
-          placeholder={t('password')}
-          type="password"
-          autoComplete="current-password"
-          className="modalInput"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              void props.onSubmit()
-            }
+        <form
+          className="modalForm"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void props.onSubmit()
           }}
-        />
-        <div className="actions" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn" type="button" onClick={props.onClose}>
-            {t('cancel')}
-          </button>
-          <button
-            className={clsx('btn', 'btnPrimary')}
-            type="button"
-            onClick={() => void props.onSubmit()}
-            disabled={props.authSending || !props.adminPassword.trim()}
-          >
-            {props.authSending ? t('sending') : t('login')}
-          </button>
-        </div>
+        >
+          <div className="slotMeta">{t('adminHint')}</div>
+          <div className="slotMeta">{t('adminShortcut')}</div>
+          <input
+            value={props.adminPassword}
+            onChange={(e) => props.onChangePassword(e.target.value)}
+            placeholder={t('password')}
+            type="password"
+            autoComplete="current-password"
+            className="modalInput"
+          />
+          <div className="actions" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn" type="button" onClick={props.onClose}>
+              {t('cancel')}
+            </button>
+            <button className={clsx('btn', 'btnPrimary')} type="submit" disabled={props.authSending || !props.adminPassword.trim()}>
+              {props.authSending ? t('sending') : t('login')}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
@@ -1084,20 +1081,28 @@ function JoinSlotModal(props: {
           <h3 style={{ margin: 0 }}>{t('joinSlot')}</h3>
           <button className="pillLink" type="button" onClick={props.onClose}>{t('close')}</button>
         </div>
-        <div className="slotMeta" style={{ marginTop: 2 }}>{display.dayLabel} · {display.range}</div>
-        <div className="slotMeta">{props.slot.label}</div>
+        <form
+          className="modalForm"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submit()
+          }}
+        >
+          <div className="slotMeta" style={{ marginTop: 2 }}>{display.dayLabel} · {display.range}</div>
+          <div className="slotMeta">{props.slot.label}</div>
 
-        <input className="modalInput" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('yourName')} />
-        <input className="modalInput" value={contact} onChange={(e) => setContact(e.target.value)} placeholder={t('yourContact')} />
-        <input className="modalInput" value={classGrade} onChange={(e) => setClassGrade(e.target.value)} placeholder={t('classGrade')} />
-        <textarea className="modalInput" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('yourMessage')} rows={4} />
+          <input className="modalInput" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('yourName')} />
+          <input className="modalInput" value={contact} onChange={(e) => setContact(e.target.value)} placeholder={t('yourContact')} />
+          <input className="modalInput" value={classGrade} onChange={(e) => setClassGrade(e.target.value)} placeholder={t('classGrade')} />
+          <textarea className="modalInput" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('yourMessage')} rows={4} />
 
-        <div className="actions" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn" type="button" onClick={props.onClose}>{t('cancel')}</button>
-          <button className={clsx('btn', 'btnPrimary')} type="button" onClick={() => void submit()} disabled={sending || !contact.trim()}>
-            {sending ? t('sending') : t('submitJoin')}
-          </button>
-        </div>
+          <div className="actions" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn" type="button" onClick={props.onClose}>{t('cancel')}</button>
+            <button className={clsx('btn', 'btnPrimary')} type="submit" disabled={sending || !contact.trim()}>
+              {sending ? t('sending') : t('submitJoin')}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
