@@ -1,0 +1,533 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Manrope:wght@500;700;800&display=swap');
+
+:root {
+  color-scheme: light;
+
+  --bg: #f6f7f2;
+  --text: #152019;
+  --muted: #4c5a50;
+  --subtle: #637266;
+
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-strong: rgba(255, 255, 255, 0.95);
+  --border: rgba(34, 63, 46, 0.18);
+  --shadow: 0 24px 46px rgba(33, 54, 42, 0.15);
+
+  --brand: #11716a;
+  --brand-weak: rgba(17, 113, 106, 0.14);
+  --brand-border: rgba(17, 113, 106, 0.36);
+  --accent: #db7a2b;
+
+  --status-available: #14784b;
+  --status-few: #c56b1d;
+  --status-full: #7a8681;
+  --status-occupied: #516058;
+
+  --radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(17, 113, 106, 0.18), transparent 32%),
+    radial-gradient(circle at 100% 0%, rgba(219, 122, 43, 0.15), transparent 30%),
+    linear-gradient(180deg, #eef4ef 0%, #f9f8f3 100%);
+  color: var(--text);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 22px 16px 124px;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(14px);
+  background: color-mix(in oklab, var(--bg) 72%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.headerInner {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--subtle);
+  max-width: 540px;
+}
+
+.pillRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.pill button,
+.pill select {
+  font: inherit;
+}
+
+.pill select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.pillLink {
+  border: 0;
+  background: transparent;
+  color: color-mix(in oklab, var(--brand) 85%, var(--text));
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.toggleBtn {
+  border: 1px solid var(--brand-border);
+  background: var(--brand-weak);
+  color: color-mix(in oklab, var(--brand) 72%, #0f312a);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewTabs {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--panel);
+  display: inline-flex;
+  gap: 3px;
+}
+
+.viewTab {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: transparent;
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.viewTabActive {
+  background: color-mix(in oklab, var(--brand) 15%, #fff);
+  color: color-mix(in oklab, var(--brand) 84%, #102c26);
+}
+
+.secretAdminWrap {
+  padding-top: 0;
+  padding-bottom: 8px;
+  justify-content: flex-end;
+}
+
+.secretAdminTrigger {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--brand) 28%, #b3bcb4);
+  cursor: pointer;
+  opacity: 0.45;
+}
+
+.secretAdminTriggerOpen {
+  opacity: 0.92;
+  background: color-mix(in oklab, var(--brand) 85%, #1a4a42);
+}
+
+.scheduleGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dayCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayHeader {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: blur(16px) saturate(145%);
+  font-weight: 800;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dayHeader small {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.slotCard {
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.77)),
+    radial-gradient(circle at 95% 10%, rgba(17, 113, 106, 0.12), transparent 46%);
+  backdrop-filter: blur(14px) saturate(135%);
+  padding: 12px;
+  box-shadow: 0 1px 0 color-mix(in oklab, var(--border) 50%, transparent);
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.slotCard:focus-visible {
+  outline: 2px solid var(--brand-border);
+  outline-offset: 2px;
+}
+
+.slotCard[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.slotCardSelected {
+  outline: 2px solid var(--brand-border);
+  box-shadow: var(--shadow);
+}
+
+.slotTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.slotLabel {
+  margin: 8px 0 0;
+  font-size: 1.02rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.slotMeta {
+  margin: 4px 0 0;
+  font-size: 0.77rem;
+  color: var(--subtle);
+  font-weight: 700;
+}
+
+.statusPill {
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.statusAvailable {
+  color: var(--status-available);
+  border-color: color-mix(in oklab, var(--status-available) 44%, var(--border));
+  background: color-mix(in oklab, var(--status-available) 16%, transparent);
+}
+
+.statusFew {
+  color: var(--status-few);
+  border-color: color-mix(in oklab, var(--status-few) 40%, var(--border));
+  background: color-mix(in oklab, var(--status-few) 14%, transparent);
+}
+
+.statusFull {
+  color: var(--status-full);
+  border-color: color-mix(in oklab, var(--status-full) 40%, var(--border));
+  background: color-mix(in oklab, var(--status-full) 12%, transparent);
+}
+
+.selectionBarWrap {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  width: calc(100% - 32px);
+  max-width: 720px;
+  z-index: 60;
+}
+
+.selectionBar {
+  border-radius: 18px;
+  border: 1px solid var(--brand-border);
+  background: var(--panel-strong);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: var(--shadow);
+  padding: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selectionLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.countBubble {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 88%, #fff), var(--brand));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.clearBtn {
+  border: 0;
+  background: transparent;
+  color: color-mix(in oklab, var(--brand) 85%, var(--text));
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  color: inherit;
+  font-weight: 800;
+  padding: 10px 12px;
+  border-radius: 13px;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  border-color: color-mix(in oklab, var(--brand) 42%, #0d3933);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 68%, #63bab4), var(--brand));
+  color: #fff;
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.04);
+}
+
+.adminPanel {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(150%);
+  padding: 12px;
+}
+
+.adminPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.adminPanelTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.adminRequestsGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.adminRequestCard {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-strong);
+  padding: 12px;
+}
+
+.adminRequestTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.adminNote {
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  min-height: 72px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: rgba(19, 31, 25, 0.34);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.joinModal,
+.adminLoginModal {
+  width: min(520px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel-strong);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.modalInput {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.mobileOnly {
+  display: none;
+}
+
+.dayTabs {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding: 2px;
+  margin: 0 0 14px;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-weight: 800;
+  background: color-mix(in oklab, var(--panel) 90%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabActive {
+  border-color: var(--brand-border);
+  background: color-mix(in oklab, var(--brand) 15%, var(--panel));
+}
+
+@media (max-width: 1080px) {
+  .scheduleGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 880px) {
+  .scheduleGrid {
+    display: none;
+  }
+  .mobileOnly {
+    display: block;
+  }
+  .pillRow {
+    justify-content: flex-start;
+  }
+  .title {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .selectionBar {
+    flex-wrap: wrap;
+  }
+}
