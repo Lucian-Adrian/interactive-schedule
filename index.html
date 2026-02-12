@@ -8,6 +8,14 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      if (isLocal) {
+        import('/src/main.tsx')
+      } else if (!window.location.pathname.includes('/build/')) {
+        const next = `/interactive-schedule/build/${window.location.search}${window.location.hash}`
+        window.location.replace(next)
+      }
+    </script>
   </body>
 </html>
