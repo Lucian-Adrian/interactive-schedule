@@ -97,6 +97,7 @@ export function App() {
   const [tzEditing, setTzEditing] = useState(false)
 
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [slotFilter, setSlotFilter] = useState<'all' | 'open' | 'available' | 'few' | 'full'>('all')
   const [mobileDay, setMobileDay] = useState<number>(() => {
     const d = new Date().getDay()
     return d === 0 ? 6 : d - 1
@@ -147,8 +148,38 @@ export function App() {
     const showFull = config?.show_full_slots ?? true
     const raw = editMode ? slots : slots.filter((s) => (s.visibility ?? true) === true)
     const withFull = showFull ? raw : raw.filter((s) => s.status !== SlotStatus.Full)
-    return sortSlots(mode, withFull)
-  }, [config?.show_full_slots, editMode, mode, slots])
+    const filtered = withFull.filter((slot) => {
+      if (slotFilter === 'all') return true
+      if (slotFilter === 'open') return slot.status === SlotStatus.Available || slot.status === SlotStatus.FewLeft
+      if (slotFilter === 'available') return slot.status === SlotStatus.Available
+      if (slotFilter === 'few') return slot.status === SlotStatus.FewLeft
+      if (slotFilter === 'full') return slot.status === SlotStatus.Full || slot.status === SlotStatus.Occupied
+      return true
+    })
+    return sortSlots(mode, filtered)
+  }, [config?.show_full_slots, editMode, mode, slotFilter, slots])
+
+  const slotStats = useMemo(() => {
+    const base = {
+      all: slots.length,
+      open: 0,
+      available: 0,
+      few: 0,
+      full: 0,
+    }
+    for (const slot of slots) {
+      if (slot.status === SlotStatus.Available) {
+        base.open += 1
+        base.available += 1
+      } else if (slot.status === SlotStatus.FewLeft) {
+        base.open += 1
+        base.few += 1
+      } else if (slot.status === SlotStatus.Full || slot.status === SlotStatus.Occupied) {
+        base.full += 1
+      }
+    }
+    return base
+  }, [slots])
 
   const selectedSlots = useMemo(() => {
     const byId = new Map(visibleSlots.map((s) => [s.id, s]))
@@ -851,6 +882,44 @@ export function App() {
                   </div>
                 </div>
 
+                <div className="slotRibbon" role="tablist" aria-label={t('status')}>
+                  <button
+                    type="button"
+                    className={clsx('slotChip', slotFilter === 'all' && 'slotChipActive')}
+                    onClick={() => setSlotFilter('all')}
+                  >
+                    {t('all')} · {slotStats.all}
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx('slotChip', slotFilter === 'open' && 'slotChipActive')}
+                    onClick={() => setSlotFilter('open')}
+                  >
+                    {t('open')} · {slotStats.open}
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx('slotChip', slotFilter === 'available' && 'slotChipActive')}
+                    onClick={() => setSlotFilter('available')}
+                  >
+                    {t('Available')} · {slotStats.available}
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx('slotChip', slotFilter === 'few' && 'slotChipActive')}
+                    onClick={() => setSlotFilter('few')}
+                  >
+                    {t('FewLeft')} · {slotStats.few}
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx('slotChip', slotFilter === 'full' && 'slotChipActive')}
+                    onClick={() => setSlotFilter('full')}
+                  >
+                    {t('Full')} · {slotStats.full}
+                  </button>
+                </div>
+
                 {activeProfile.mode === 'weekly' ? (
                   <>
                     <div className="scheduleGrid desktopGrid" role="table" aria-label={t('schedule')}>
@@ -1104,7 +1173,7 @@ function JoinSlotModal(props: {
   const display = slotToDisplayTimes(props.slot, props.configTimezone, props.timezone, props.lang)
 
   const submit = async () => {
-    if (!name.trim() || !contact.trim() || !classGrade.trim()) return
+    if (!name.trim()) return
     setSending(true)
     try {
       await props.onSubmit({
@@ -1147,8 +1216,8 @@ function JoinSlotModal(props: {
           <div className="slotMeta">{props.slot.label}</div>
 
           <input className="modalInput" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('yourName')} required />
-          <input className="modalInput" value={contact} onChange={(e) => setContact(e.target.value)} placeholder={t('yourContact')} required />
-          <input className="modalInput" value={classGrade} onChange={(e) => setClassGrade(e.target.value)} placeholder={t('classGrade')} required />
+          <input className="modalInput" value={contact} onChange={(e) => setContact(e.target.value)} placeholder={t('yourContact')} />
+          <input className="modalInput" value={classGrade} onChange={(e) => setClassGrade(e.target.value)} placeholder={t('classGrade')} />
           <textarea className="modalInput" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('yourMessage')} rows={4} />
 
           <div className="privacyNote">{t('privacyNote')}</div>
@@ -1160,7 +1229,7 @@ function JoinSlotModal(props: {
             <button
               className={clsx('btn', 'btnPrimary')}
               type="submit"
-              disabled={sending || !name.trim() || !contact.trim() || !classGrade.trim()}
+              disabled={sending || !name.trim()}
             >
               {sending ? t('sending') : t('submitJoin')}
             </button>
@@ -1607,7 +1676,7 @@ function AdminRequestCard(props: {
   const [busy, setBusy] = useState(false)
 
   const runUpdate = async () => {
-    if (!name.trim() || !contact.trim()) return
+    if (!name.trim()) return
     setBusy(true)
     try {
       await props.onUpdate({
@@ -1660,7 +1729,7 @@ function AdminRequestCard(props: {
       <textarea className="modalInput" rows={2} value={adminNote} onChange={(e) => setAdminNote(e.target.value)} placeholder={t('adminNote')} />
 
       <div className="actions wrap">
-        <button className="btn" type="button" onClick={() => void runUpdate()} disabled={busy || !name.trim() || !contact.trim()}>
+        <button className="btn" type="button" onClick={() => void runUpdate()} disabled={busy || !name.trim()}>
           {t('saveChanges')}
         </button>
         <button className={clsx('btn', 'btnPrimary')} type="button" onClick={() => void runReview('approved')} disabled={busy || props.request.status !== 'pending'}>

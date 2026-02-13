@@ -51,7 +51,7 @@ export type SlotRequest = {
   profile_title: string | null
   slot_id: string
   student_name: string | null
-  student_contact: string
+  student_contact: string | null
   student_class: string | null
   student_note: string | null
   status: SlotRequestStatus

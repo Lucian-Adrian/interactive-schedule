@@ -4,11 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <title>Disponibilitate</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module">
+      function getFallbackCandidates() {
+        const path = window.location.pathname || '/'
+        const underRepo = path.startsWith('/interactive-schedule/')
+        const base = underRepo ? '/interactive-schedule/' : '/'
+        return [
+          `${base}assets/branch-main.js`,
+          '/interactive-schedule/assets/branch-main.js',
+          '/assets/branch-main.js',
+          './assets/branch-main.js',
+        ]
+      }
+
+      async function loadFallbackBundle() {
+        for (const url of getFallbackCandidates()) {
+          try {
+            await import(/* @vite-ignore */ url)
+            return
+          } catch {
+            // try next candidate
+          }
+        }
+      }
+
       window.addEventListener(
         'error',
         (event) => {
@@ -17,8 +41,7 @@
             scriptTarget instanceof HTMLScriptElement && scriptTarget.src.includes('/src/main.tsx')
           const failedParse = typeof event.filename === 'string' && event.filename.includes('/src/main.tsx')
           if (!failedModuleLoad && !failedParse) return
-          const fallbackUrl = '/interactive-schedule/assets/branch-main.js'
-          import(/* @vite-ignore */ fallbackUrl)
+          void loadFallbackBundle()
         },
         true,
       )
