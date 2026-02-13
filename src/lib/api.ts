@@ -41,6 +41,12 @@ async function getPublicProfiles(): Promise<ScheduleProfile[]> {
   return (data ?? []) as ScheduleProfile[]
 }
 
+async function getPublicProfileBySlug(slug: string): Promise<ScheduleProfile | null> {
+  const { data, error } = await supabase.from('schedule_profiles').select('*').eq('slug', slug).maybeSingle()
+  if (error) throw error
+  return (data as ScheduleProfile | null) ?? null
+}
+
 async function getAdminProfiles(): Promise<ScheduleProfile[]> {
   const password = requireAdminPassword()
   const { data, error } = await supabase.rpc('admin_get_profiles', {
@@ -223,6 +229,7 @@ async function deleteSlotRequest(requestId: string): Promise<void> {
 export const api = {
   getConfig,
   getPublicProfiles,
+  getPublicProfileBySlug,
   getAdminProfiles,
   saveProfile,
   deleteProfile,

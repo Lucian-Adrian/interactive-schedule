@@ -22,7 +22,6 @@ const DAY_LABELS: Record<'ro' | 'en' | 'ru', readonly string[]> = {
 }
 
 const LANG_STORAGE_KEY = 'schedule-sync-lang'
-const VIEW_STORAGE_KEY = 'schedule-sync-view'
 
 function getDayIndexForSlot(dayOfWeek: number): number {
   return dayOfWeek === 0 ? 6 : dayOfWeek - 1
@@ -228,10 +227,26 @@ export function App() {
   }, [activeProfile, requestFilter, requestQuery, requests])
 
   const loadProfiles = useCallback(async () => {
-    const list = isAdmin ? await api.getAdminProfiles() : await api.getPublicProfiles()
+    if (isAdmin) {
+      const list = await api.getAdminProfiles()
+      setProfiles(list)
+      return list
+    }
+
+    const linkedView = parsePrefsFromUrl().view
+    const requested = linkedView ?? activeViewSlug ?? 'default'
+    const picked =
+      (await api.getPublicProfileBySlug(requested)) ??
+      (await api.getPublicProfileBySlug('default')) ??
+      (await (async () => {
+        const all = await api.getPublicProfiles()
+        return all[0] ?? null
+      })())
+
+    const list = picked ? [picked] : []
     setProfiles(list)
     return list
-  }, [isAdmin])
+  }, [activeViewSlug, isAdmin])
 
   const loadSlots = useCallback(
     async (profileId: string) => {
@@ -264,16 +279,13 @@ export function App() {
     setLang(initialLang)
     void i18n.changeLanguage(initialLang)
 
-    const storedView = localStorage.getItem(VIEW_STORAGE_KEY)
     if (prefs.view) setActiveViewSlug(prefs.view)
-    else if (storedView) setActiveViewSlug(storedView)
 
     if (prefs.tz) setTimezone(prefs.tz)
   }, [i18n])
 
   useEffect(() => {
     localStorage.setItem(LANG_STORAGE_KEY, lang)
-    localStorage.setItem(VIEW_STORAGE_KEY, activeViewSlug)
     setPrefsToUrl({ lang, tz: timezone, view: activeProfile?.slug ?? activeViewSlug })
     void i18n.changeLanguage(lang)
   }, [activeProfile?.slug, activeViewSlug, i18n, lang, timezone])
@@ -287,8 +299,7 @@ export function App() {
         if (!mounted) return
         setConfig(cfg)
 
-        const targetSlug =
-          parsePrefsFromUrl().view ?? localStorage.getItem(VIEW_STORAGE_KEY) ?? loadedProfiles[0]?.slug ?? 'default'
+        const targetSlug = parsePrefsFromUrl().view ?? loadedProfiles[0]?.slug ?? 'default'
         const nextActive = loadedProfiles.find((p) => p.slug === targetSlug) ?? loadedProfiles[0] ?? null
         if (nextActive) {
           setActiveViewSlug(nextActive.slug)
@@ -475,9 +486,17 @@ export function App() {
     setAdminTab('schedule')
     setRequests([])
 
-    const nextProfiles = await api.getPublicProfiles()
+    const linkedView = parsePrefsFromUrl().view ?? activeViewSlug ?? 'default'
+    const picked =
+      (await api.getPublicProfileBySlug(linkedView)) ??
+      (await api.getPublicProfileBySlug('default')) ??
+      (await (async () => {
+        const all = await api.getPublicProfiles()
+        return all[0] ?? null
+      })())
+    const nextProfiles = picked ? [picked] : []
     setProfiles(nextProfiles)
-    const nextActive = nextProfiles.find((p) => p.slug === activeViewSlug) ?? nextProfiles[0] ?? null
+    const nextActive = nextProfiles[0] ?? null
     if (nextActive) {
       setActiveViewSlug(nextActive.slug)
       await loadSlots(nextActive.id)
@@ -724,20 +743,27 @@ export function App() {
           </div>
 
           <div className="toolbarCluster">
-            <div className="pill glassPill">
-              <span>{t('view')}</span>
-              <select
-                value={activeProfile?.slug ?? ''}
-                onChange={(e) => setActiveViewSlug(e.target.value)}
-                aria-label={t('view')}
-              >
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.slug}>
-                    {p.title} / {p.slug}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isAdmin ? (
+              <div className="pill glassPill">
+                <span>{t('view')}</span>
+                <select
+                  value={activeProfile?.slug ?? ''}
+                  onChange={(e) => setActiveViewSlug(e.target.value)}
+                  aria-label={t('view')}
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.slug}>
+                      {p.title} / {p.slug}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="pill glassPill">
+                <span>{t('view')}</span>
+                <strong style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink)' }}>/ {activeProfile?.slug ?? 'default'}</strong>
+              </div>
+            )}
 
             <button className="btn" type="button" onClick={() => void copyShareLink()}>
               {t('copyViewLink')}
