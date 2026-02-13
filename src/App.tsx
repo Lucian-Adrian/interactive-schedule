@@ -234,7 +234,14 @@ export function App() {
     }
 
     const linkedView = parsePrefsFromUrl().view
-    const requested = linkedView ?? activeViewSlug ?? 'default'
+    if (linkedView) {
+      const strictPicked = await api.getPublicProfileBySlug(linkedView)
+      const strictList = strictPicked ? [strictPicked] : []
+      setProfiles(strictList)
+      return strictList
+    }
+
+    const requested = activeViewSlug ?? 'default'
     const picked =
       (await api.getPublicProfileBySlug(requested)) ??
       (await api.getPublicProfileBySlug('default')) ??
@@ -286,9 +293,11 @@ export function App() {
 
   useEffect(() => {
     localStorage.setItem(LANG_STORAGE_KEY, lang)
-    setPrefsToUrl({ lang, tz: timezone, view: activeProfile?.slug ?? activeViewSlug })
+    const linkView = parsePrefsFromUrl().view
+    const stablePublicView = !isAdmin && linkView ? linkView : undefined
+    setPrefsToUrl({ lang, tz: timezone, view: activeProfile?.slug ?? stablePublicView ?? activeViewSlug })
     void i18n.changeLanguage(lang)
-  }, [activeProfile?.slug, activeViewSlug, i18n, lang, timezone])
+  }, [activeProfile?.slug, activeViewSlug, i18n, isAdmin, lang, timezone])
 
   useEffect(() => {
     let mounted = true
@@ -299,13 +308,18 @@ export function App() {
         if (!mounted) return
         setConfig(cfg)
 
-        const targetSlug = parsePrefsFromUrl().view ?? loadedProfiles[0]?.slug ?? 'default'
+        const requestedView = parsePrefsFromUrl().view
+        const targetSlug = requestedView ?? loadedProfiles[0]?.slug ?? activeViewSlug ?? 'default'
         const nextActive = loadedProfiles.find((p) => p.slug === targetSlug) ?? loadedProfiles[0] ?? null
         if (nextActive) {
           setActiveViewSlug(nextActive.slug)
           if (!parsePrefsFromUrl().tz && nextActive.timezone) setTimezone(nextActive.timezone)
           if (!parsePrefsFromUrl().lang && nextActive.default_language) setLang(nextActive.default_language)
           await loadSlots(nextActive.id)
+        } else if (requestedView) {
+          // Keep URL-selected view untouched when it does not resolve publicly.
+          setActiveViewSlug(requestedView)
+          setSlots([])
         }
       } catch {
         // keep clean surface
@@ -486,14 +500,15 @@ export function App() {
     setAdminTab('schedule')
     setRequests([])
 
-    const linkedView = parsePrefsFromUrl().view ?? activeViewSlug ?? 'default'
-    const picked =
-      (await api.getPublicProfileBySlug(linkedView)) ??
-      (await api.getPublicProfileBySlug('default')) ??
-      (await (async () => {
-        const all = await api.getPublicProfiles()
-        return all[0] ?? null
-      })())
+    const linkedView = parsePrefsFromUrl().view
+    const picked = linkedView
+      ? await api.getPublicProfileBySlug(linkedView)
+      : (await api.getPublicProfileBySlug(activeViewSlug ?? 'default')) ??
+        (await api.getPublicProfileBySlug('default')) ??
+        (await (async () => {
+          const all = await api.getPublicProfiles()
+          return all[0] ?? null
+        })())
     const nextProfiles = picked ? [picked] : []
     setProfiles(nextProfiles)
     const nextActive = nextProfiles[0] ?? null
