@@ -1,5 +1,5 @@
-const cssFile = 'index-DeGtzbO8.css'
-const jsFile = 'index-BoTv1NoV.js'
+const cssFile = 'index-BA_93IMa.css'
+const jsFile = 'index-BrvPkZRt.js'
 
 const path = window.location.pathname || '/'
 const inRepoPath = path.startsWith('/interactive-schedule/')

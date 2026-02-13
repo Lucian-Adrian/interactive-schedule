@@ -1,8 +1,10 @@
 import { addDays, format, startOfWeek } from 'date-fns'
+import { enUS, ro, ru } from 'date-fns/locale'
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz'
 import type { ScheduleMode, Slot } from '@/lib/types'
 
 const WEEK_STARTS_ON = 1 as const
+const LOCALE_BY_LANG = { en: enUS, ro, ru } as const
 
 function getWeekStartInTz(tz: string): Date {
   const now = new Date()
@@ -11,9 +13,10 @@ function getWeekStartInTz(tz: string): Date {
 }
 
 export function formatScheduleRange(mode: ScheduleMode, viewTz: string, lang: string): string {
+  const locale = LOCALE_BY_LANG[(lang === 'ro' || lang === 'ru' ? lang : 'en') as 'en' | 'ro' | 'ru']
   if (mode === 'calendar') {
     const now = new Date()
-    const label = formatInTimeZone(now, viewTz, 'LLLL yyyy')
+    const label = formatInTimeZone(now, viewTz, 'LLLL yyyy', { locale })
     return lang === 'ro'
       ? `Calendar: ${label}`
       : lang === 'ru'
@@ -24,8 +27,8 @@ export function formatScheduleRange(mode: ScheduleMode, viewTz: string, lang: st
   const weekStart = getWeekStartInTz(viewTz)
   const weekEnd = addDays(weekStart, 6)
   const pattern = 'd MMM'
-  const a = formatInTimeZone(weekStart, viewTz, pattern)
-  const b = formatInTimeZone(weekEnd, viewTz, pattern)
+  const a = formatInTimeZone(weekStart, viewTz, pattern, { locale })
+  const b = formatInTimeZone(weekEnd, viewTz, pattern, { locale })
   return lang === 'ro' ? `Săptămâna: ${a}–${b}` : lang === 'ru' ? `Неделя: ${a}–${b}` : `Week: ${a}–${b}`
 }
 
@@ -61,11 +64,12 @@ export function slotToDisplayTimes(
   viewTz: string,
   lang: string,
 ): { dayLabel: string; range: string } {
+  const locale = LOCALE_BY_LANG[(lang === 'ro' || lang === 'ru' ? lang : 'en') as 'en' | 'ro' | 'ru']
   const { start, end } = slotDateInConfigTz(slot, configTz, viewTz)
   const day = slot.slot_date
-    ? formatInTimeZone(start, viewTz, 'EEE, d MMM yyyy')
-    : formatInTimeZone(start, viewTz, 'EEE, d MMM')
-  const a = formatInTimeZone(start, viewTz, 'HH:mm')
-  const b = formatInTimeZone(end, viewTz, 'HH:mm')
+    ? formatInTimeZone(start, viewTz, 'EEE, d MMM yyyy', { locale })
+    : formatInTimeZone(start, viewTz, 'EEE, d MMM', { locale })
+  const a = formatInTimeZone(start, viewTz, 'HH:mm', { locale })
+  const b = formatInTimeZone(end, viewTz, 'HH:mm', { locale })
   return { dayLabel: day, range: `${a}–${b}` }
 }

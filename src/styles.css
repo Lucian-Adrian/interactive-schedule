@@ -559,6 +559,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  animation: floatUp 240ms ease;
 }
 
 .selectionLeft {
@@ -597,6 +598,7 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .actions.end {
@@ -619,12 +621,13 @@ body {
   padding: 8px 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
 }
 
 .btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 7px 14px rgba(26, 46, 91, 0.14);
+  filter: saturate(110%);
 }
 
 .btnPrimary {
@@ -643,20 +646,101 @@ body {
   position: fixed;
   opacity: 0;
   pointer-events: none;
-  width: 380px;
+  width: 560px;
   left: -9999px;
   top: -9999px;
-  border-radius: 20px;
-  padding: 16px;
-  border: 1px solid var(--line-soft);
-  background: rgba(255, 255, 255, 0.95);
+  border-radius: 28px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  background:
+    radial-gradient(circle at 14% 12%, rgba(120, 194, 255, 0.35), transparent 34%),
+    radial-gradient(circle at 82% 8%, rgba(126, 154, 255, 0.2), transparent 32%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 255, 0.96));
+  box-shadow: 0 34px 58px rgba(10, 42, 101, 0.28);
+}
+
+.shareCardTop h3 {
+  margin: 10px 0 2px;
+  font-family: Sora, Manrope, sans-serif;
+  font-size: 1.38rem;
+  letter-spacing: -0.03em;
+}
+
+.shareCardTop p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.shareCount {
+  margin-top: 10px;
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0c4ea9;
+  background: rgba(12, 78, 169, 0.1);
+  border: 1px solid rgba(12, 78, 169, 0.2);
+}
+
+.shareBadge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.63rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-deep);
+  background: rgba(10, 111, 255, 0.12);
+  border: 1px solid rgba(10, 111, 255, 0.26);
+}
+
+.shareList {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
 }
 
 .shareLine {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  padding: 10px 12px;
+}
+
+.shareLineMain {
+  display: grid;
+  gap: 2px;
+}
+
+.shareLineTime {
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.shareLineDay {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: capitalize;
+}
+
+.shareFooter {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  padding-top: 10px;
 }
 
 .modalBackdrop {
@@ -909,5 +993,16 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes floatUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

@@ -10,15 +10,15 @@ import type { ScheduleConfig, ScheduleMode, ScheduleProfile, Slot, SlotRequest }
 import { SlotStatus } from '@/lib/types'
 
 const LANGS = [
-  { code: 'ro', name: 'Romana' },
+  { code: 'ro', name: 'Română' },
   { code: 'en', name: 'English' },
-  { code: 'ru', name: 'Russkiy' },
+  { code: 'ru', name: 'Русский' },
 ] as const
 
 const DAY_LABELS: Record<'ro' | 'en' | 'ru', readonly string[]> = {
   en: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  ro: ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sam', 'Dum'],
-  ru: ['Pn', 'Vt', 'Sr', 'Cht', 'Pt', 'Sb', 'Vs'],
+  ro: ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'],
+  ru: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
 }
 
 const LANG_STORAGE_KEY = 'schedule-sync-lang'
@@ -42,6 +42,13 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+}
+
+function normalizeLang(input: string | null | undefined): 'ro' | 'en' | 'ru' | null {
+  if (!input) return null
+  const short = input.toLowerCase().split('-')[0]
+  if (short === 'ro' || short === 'en' || short === 'ru') return short
+  return null
 }
 
 function localeForLang(lang: 'ro' | 'en' | 'ru'): string {
@@ -276,13 +283,7 @@ export function App() {
 
   useEffect(() => {
     const prefs = parsePrefsFromUrl()
-    const storedLang = (localStorage.getItem(LANG_STORAGE_KEY) as 'ro' | 'en' | 'ru' | null) ?? null
-    const initialLang =
-      prefs.lang && (prefs.lang === 'ro' || prefs.lang === 'en' || prefs.lang === 'ru')
-        ? prefs.lang
-        : storedLang && (storedLang === 'ro' || storedLang === 'en' || storedLang === 'ru')
-          ? storedLang
-          : 'ro'
+    const initialLang = normalizeLang(prefs.lang) ?? normalizeLang(localStorage.getItem(LANG_STORAGE_KEY)) ?? 'ro'
     setLang(initialLang)
     void i18n.changeLanguage(initialLang)
 
@@ -314,7 +315,10 @@ export function App() {
         if (nextActive) {
           setActiveViewSlug(nextActive.slug)
           if (!parsePrefsFromUrl().tz && nextActive.timezone) setTimezone(nextActive.timezone)
-          if (!parsePrefsFromUrl().lang && nextActive.default_language) setLang(nextActive.default_language)
+          if (!parsePrefsFromUrl().lang) {
+            const cfgLang = normalizeLang(nextActive.default_language)
+            if (cfgLang) setLang(cfgLang)
+          }
           await loadSlots(nextActive.id)
         } else if (requestedView) {
           // Keep URL-selected view untouched when it does not resolve publicly.
@@ -641,24 +645,100 @@ export function App() {
     [t],
   )
 
-  const copyMessage = useCallback(async () => {
-    const msg = buildMessage({
-      lang,
-      title: activeProfile?.title ?? title,
-      configTimezone,
-      viewTimezone: timezone,
-      weekRangeLabel: rangeLabel,
-      slots: selectedSlots,
-    })
+  const selectionMessage = useMemo(
+    () =>
+      buildMessage({
+        lang,
+        title: activeProfile?.title ?? title,
+        configTimezone,
+        viewTimezone: timezone,
+        weekRangeLabel: rangeLabel,
+        slots: selectedSlots,
+      }),
+    [activeProfile?.title, configTimezone, lang, rangeLabel, selectedSlots, timezone],
+  )
 
+  const copyMessage = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(msg)
+      await navigator.clipboard.writeText(selectionMessage)
       setAuthInfo(t('copied'))
       window.setTimeout(() => setAuthInfo(null), 1800)
     } catch {
-      window.prompt(t('copyFallback'), msg)
+      window.prompt(t('copyFallback'), selectionMessage)
     }
-  }, [activeProfile?.title, configTimezone, lang, rangeLabel, selectedSlots, t, timezone])
+  }, [selectionMessage, t])
+
+  const copyImage = useCallback(async () => {
+    if (!shareCardRef.current) return
+    try {
+      const { toBlob, toPng } = await import('html-to-image')
+      const blob = await toBlob(shareCardRef.current, {
+        cacheBust: true,
+        pixelRatio: Math.max(2.5, window.devicePixelRatio || 1),
+        backgroundColor: 'transparent',
+      })
+      if (blob && 'clipboard' in navigator && 'ClipboardItem' in window) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        setAuthInfo(t('copiedImage'))
+        window.setTimeout(() => setAuthInfo(null), 1800)
+        return
+      }
+
+      // Fallback for browsers without image clipboard support.
+      const dataUrl = await toPng(shareCardRef.current, {
+        cacheBust: true,
+        pixelRatio: Math.max(2.5, window.devicePixelRatio || 1),
+        backgroundColor: 'transparent',
+      })
+      const a = document.createElement('a')
+      a.download = `disponibilitate-${activeProfile?.slug ?? 'view'}-${lang}.png`
+      a.href = dataUrl
+      a.click()
+      setAuthInfo(t('copyImageFallback'))
+      window.setTimeout(() => setAuthInfo(null), 2200)
+    } catch {
+      setAuthInfo(t('copyImageFailed'))
+      window.setTimeout(() => setAuthInfo(null), 2200)
+    }
+  }, [activeProfile?.slug, lang, t])
+
+  const shareNative = useCallback(async () => {
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({
+          title: activeProfile?.title ?? title,
+          text: selectionMessage,
+          url: window.location.href,
+        })
+        setAuthInfo(t('shared'))
+      } else {
+        await navigator.clipboard.writeText(selectionMessage)
+        setAuthInfo(t('copied'))
+      }
+      window.setTimeout(() => setAuthInfo(null), 1800)
+    } catch {
+      // user canceled share or unsupported path
+    }
+  }, [activeProfile?.title, selectionMessage, t])
+
+  const shareWhatsApp = useCallback(() => {
+    const url = `https://wa.me/?text=${encodeURIComponent(selectionMessage)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [selectionMessage])
+
+  const downloadImage = useCallback(async () => {
+    if (!shareCardRef.current) return
+    const { toPng } = await import('html-to-image')
+    const dataUrl = await toPng(shareCardRef.current, {
+      cacheBust: true,
+      pixelRatio: Math.max(2.5, window.devicePixelRatio || 1),
+      backgroundColor: 'transparent',
+    })
+    const a = document.createElement('a')
+    a.download = `disponibilitate-${activeProfile?.slug ?? 'view'}-${lang}.png`
+    a.href = dataUrl
+    a.click()
+  }, [activeProfile?.slug, lang])
 
   const copyShareLink = useCallback(async () => {
     const url = new URL(window.location.href)
@@ -674,19 +754,19 @@ export function App() {
     }
   }, [activeProfile, lang, t, timezone])
 
-  const downloadImage = useCallback(async () => {
-    if (!shareCardRef.current) return
-    const { toPng } = await import('html-to-image')
-    const dataUrl = await toPng(shareCardRef.current, {
-      cacheBust: true,
-      pixelRatio: Math.max(2, window.devicePixelRatio || 1),
-      backgroundColor: 'transparent',
-    })
-    const a = document.createElement('a')
-    a.download = `disponibilitate-${activeProfile?.slug ?? 'view'}-${lang}.png`
-    a.href = dataUrl
-    a.click()
-  }, [activeProfile?.slug, lang])
+  const shareCardFooter = useMemo(() => {
+    const stamp = new Intl.DateTimeFormat(localeForLang(lang), {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: timezone,
+    }).format(new Date())
+    return `${t('generatedAt')} ${stamp}`
+  }, [lang, t, timezone])
+
+  const shareCardSubtitle = useMemo(() => {
+    if (!activeProfile) return rangeLabel
+    return `${rangeLabel} • /${activeProfile.slug}`
+  }, [activeProfile, rangeLabel])
 
   const renderSlotCard = (slot: Slot) => {
     const selected = selectedIds.includes(slot.id)
@@ -1049,6 +1129,15 @@ export function App() {
               <button className="btn" type="button" onClick={() => void copyMessage()}>
                 {t('copyMessage')}
               </button>
+              <button className="btn" type="button" onClick={() => void copyImage()}>
+                {t('copyImage')}
+              </button>
+              <button className="btn" type="button" onClick={() => void shareNative()}>
+                {t('shareNow')}
+              </button>
+              <button className="btn" type="button" onClick={() => shareWhatsApp()}>
+                WhatsApp
+              </button>
               <button className={clsx('btn', 'btnPrimary')} type="button" onClick={() => void downloadImage()}>
                 {t('downloadImage')}
               </button>
@@ -1058,18 +1147,29 @@ export function App() {
       ) : null}
 
       <div className="shareCard" ref={shareCardRef} aria-hidden>
-        <h3>{activeProfile?.title ?? title}</h3>
-        <p>{rangeLabel}</p>
-        <div>
+        <div className="shareCardTop">
+          <span className="shareBadge">DISPONIBILITATE</span>
+          <h3>{activeProfile?.title ?? title}</h3>
+          <p>{shareCardSubtitle}</p>
+          <div className="shareCount">{t('selected', { count: selectedSlots.length })}</div>
+        </div>
+        <div className="shareList">
           {selectedSlots.map((s) => {
             const d = slotToDisplayTimes(s, configTimezone, timezone, lang)
             return (
               <div key={s.id} className="shareLine">
-                <span>{d.dayLabel}</span>
-                <b>{d.range}</b>
+                <div className="shareLineMain">
+                  <span className="shareLineTime">{d.range}</span>
+                  <span className="shareLineDay">{d.dayLabel}</span>
+                </div>
+                <b>{s.label}</b>
               </div>
             )
           })}
+        </div>
+        <div className="shareFooter">
+          <span>{timezone}</span>
+          <span>{shareCardFooter}</span>
         </div>
       </div>
 

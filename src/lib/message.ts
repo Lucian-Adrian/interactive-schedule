@@ -11,22 +11,22 @@ export function buildMessage(args: {
 }): string {
   const header =
     args.lang === 'ro'
-      ? `Bună! Aș dori să rezerv o sesiune.\n\n${args.title}\n${args.weekRangeLabel}`
+      ? `Bună! Aș dori să rezerv o sesiune.\n\n${args.title}\n${args.weekRangeLabel}\nIntervale preferate:`
       : args.lang === 'ru'
-        ? `Привет! Я хотел бы забронировать занятие.\n\n${args.title}\n${args.weekRangeLabel}`
-        : `Hi! I would like to book a session.\n\n${args.title}\n${args.weekRangeLabel}`
+        ? `Здравствуйте! Хочу записаться на занятие.\n\n${args.title}\n${args.weekRangeLabel}\nПредпочтительные интервалы:`
+        : `Hi! I'd like to book a session.\n\n${args.title}\n${args.weekRangeLabel}\nPreferred time options:`
 
   const list =
     args.slots.length === 0
       ? args.lang === 'ro'
-        ? '- (nimic selectat)'
+        ? '1) (nimic selectat)'
         : args.lang === 'ru'
-          ? '- (ничего не выбрано)'
-          : '- (nothing selected)'
+          ? '1) (ничего не выбрано)'
+          : '1) (nothing selected)'
       : args.slots
-          .map((s) => {
+          .map((s, index) => {
             const d = slotToDisplayTimes(s, args.configTimezone, args.viewTimezone, args.lang)
-            return `- ${d.dayLabel} ${d.range} — ${s.label}`
+            return `${index + 1}) ${d.dayLabel}, ${d.range} — ${s.label}`
           })
           .join('\n')
 
@@ -37,5 +37,12 @@ export function buildMessage(args: {
         ? `\n\nЧасовой пояс: ${args.viewTimezone}`
         : `\n\nTimezone: ${args.viewTimezone}`
 
-  return `${header}\n\n${list}${tzLine}`
+  const footer =
+    args.lang === 'ro'
+      ? '\n\nMulțumesc! Confirmă-mi te rog ce interval rămâne disponibil.'
+      : args.lang === 'ru'
+        ? '\n\nСпасибо! Подтвердите, пожалуйста, какой интервал остается свободным.'
+        : '\n\nThank you. Please confirm which interval is still available.'
+
+  return `${header}\n\n${list}${tzLine}${footer}`
 }
