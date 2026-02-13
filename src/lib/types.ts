@@ -6,8 +6,12 @@ export enum SlotStatus {
   Hidden = 'Hidden',
 }
 
+export type ScheduleMode = 'weekly' | 'calendar'
+
 export type Slot = {
   id: string
+  profile_id: string
+  slot_date: string | null
   day_of_week: number
   start_time: string
   end_time: string
@@ -27,10 +31,24 @@ export type ScheduleConfig = {
   show_full_slots?: boolean | null
 }
 
+export type ScheduleProfile = {
+  id: string
+  slug: string
+  title: string
+  description: string | null
+  mode: ScheduleMode
+  timezone: string | null
+  default_language: 'ro' | 'en' | 'ru' | null
+  is_public: boolean
+}
+
 export type SlotRequestStatus = 'pending' | 'approved' | 'rejected'
 
 export type SlotRequest = {
   id: string
+  profile_id: string
+  profile_slug: string | null
+  profile_title: string | null
   slot_id: string
   student_name: string | null
   student_contact: string
@@ -40,6 +58,7 @@ export type SlotRequest = {
   admin_note: string | null
   created_at: string
   reviewed_at: string | null
+  slot_date: string | null
   slot_day_of_week: number | null
   slot_start_time: string | null
   slot_end_time: string | null

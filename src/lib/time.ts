@@ -1,6 +1,6 @@
 import { addDays, format, startOfWeek } from 'date-fns'
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz'
-import type { Slot } from '@/lib/types'
+import type { ScheduleMode, Slot } from '@/lib/types'
 
 const WEEK_STARTS_ON = 1 as const
 
@@ -10,7 +10,17 @@ function getWeekStartInTz(tz: string): Date {
   return startOfWeek(zoned, { weekStartsOn: WEEK_STARTS_ON })
 }
 
-export function formatWeekRange(viewTz: string, lang: string): string {
+export function formatScheduleRange(mode: ScheduleMode, viewTz: string, lang: string): string {
+  if (mode === 'calendar') {
+    const now = new Date()
+    const label = formatInTimeZone(now, viewTz, 'LLLL yyyy')
+    return lang === 'ro'
+      ? `Calendar: ${label}`
+      : lang === 'ru'
+        ? `Календарь: ${label}`
+        : `Calendar: ${label}`
+  }
+
   const weekStart = getWeekStartInTz(viewTz)
   const weekEnd = addDays(weekStart, 6)
   const pattern = 'd MMM'
@@ -20,12 +30,24 @@ export function formatWeekRange(viewTz: string, lang: string): string {
 }
 
 function slotDateInConfigTz(slot: Slot, configTz: string, viewTz: string): { start: Date; end: Date } {
-  const weekStart = getWeekStartInTz(viewTz)
-  const dayOffset = slot.day_of_week === 0 ? 6 : slot.day_of_week - 1
-  const localDate = addDays(weekStart, dayOffset)
-  const yyyy = format(localDate, 'yyyy')
-  const mm = format(localDate, 'MM')
-  const dd = format(localDate, 'dd')
+  let yyyy: string
+  let mm: string
+  let dd: string
+
+  if (slot.slot_date) {
+    const date = new Date(`${slot.slot_date}T00:00:00`)
+    yyyy = format(date, 'yyyy')
+    mm = format(date, 'MM')
+    dd = format(date, 'dd')
+  } else {
+    const weekStart = getWeekStartInTz(viewTz)
+    const dayOffset = slot.day_of_week === 0 ? 6 : slot.day_of_week - 1
+    const localDate = addDays(weekStart, dayOffset)
+    yyyy = format(localDate, 'yyyy')
+    mm = format(localDate, 'MM')
+    dd = format(localDate, 'dd')
+  }
+
   const startIso = `${yyyy}-${mm}-${dd}T${slot.start_time}:00`
   const endIso = `${yyyy}-${mm}-${dd}T${slot.end_time}:00`
   const startUtc = fromZonedTime(startIso, configTz)
@@ -40,7 +62,9 @@ export function slotToDisplayTimes(
   lang: string,
 ): { dayLabel: string; range: string } {
   const { start, end } = slotDateInConfigTz(slot, configTz, viewTz)
-  const day = formatInTimeZone(start, viewTz, 'EEE, d MMM')
+  const day = slot.slot_date
+    ? formatInTimeZone(start, viewTz, 'EEE, d MMM yyyy')
+    : formatInTimeZone(start, viewTz, 'EEE, d MMM')
   const a = formatInTimeZone(start, viewTz, 'HH:mm')
   const b = formatInTimeZone(end, viewTz, 'HH:mm')
   return { dayLabel: day, range: `${a}–${b}` }

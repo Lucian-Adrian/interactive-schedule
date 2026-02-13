@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { ScheduleConfig, Slot, SlotRequest, SlotRequestStatus } from '@/lib/types'
+import type { ScheduleConfig, ScheduleProfile, Slot, SlotRequest, SlotRequestStatus } from '@/lib/types'
 
 const ADMIN_PWD_KEY = 'schedule-sync-admin-password'
 
@@ -35,12 +35,58 @@ async function getConfig(): Promise<ScheduleConfig | null> {
   return data as ScheduleConfig
 }
 
-async function getSlots(): Promise<Slot[]> {
+async function getPublicProfiles(): Promise<ScheduleProfile[]> {
+  const { data, error } = await supabase.from('schedule_profiles').select('*').order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as ScheduleProfile[]
+}
+
+async function getAdminProfiles(): Promise<ScheduleProfile[]> {
+  const password = requireAdminPassword()
+  const { data, error } = await supabase.rpc('admin_get_profiles', {
+    input_password: password,
+  })
+  if (error) throw error
+  return (data ?? []) as ScheduleProfile[]
+}
+
+async function saveProfile(profile: ScheduleProfile): Promise<ScheduleProfile> {
+  const password = requireAdminPassword()
+  const { data, error } = await supabase.rpc('admin_upsert_profile', {
+    input_password: password,
+    payload: profile,
+  })
+  if (error) throw error
+  return data as ScheduleProfile
+}
+
+async function deleteProfile(profileId: string): Promise<void> {
+  const password = requireAdminPassword()
+  const { error } = await supabase.rpc('admin_delete_profile', {
+    input_password: password,
+    p_profile_id: profileId,
+  })
+  if (error) throw error
+}
+
+async function getPublicSlots(profileId: string): Promise<Slot[]> {
   const { data, error } = await supabase
     .from('slots')
     .select('*')
+    .eq('profile_id', profileId)
+    .order('slot_date', { ascending: true, nullsFirst: false })
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as Slot[]
+}
+
+async function getAdminSlotsForProfile(profileId: string): Promise<Slot[]> {
+  const password = requireAdminPassword()
+  const { data, error } = await supabase.rpc('admin_get_slots', {
+    input_password: password,
+    p_profile_id: profileId,
+  })
   if (error) throw error
   return (data ?? []) as Slot[]
 }
@@ -89,6 +135,17 @@ async function restoreAdminSession(): Promise<boolean> {
 
 function logoutAdmin() {
   setStoredAdminPassword(null)
+}
+
+async function changeAdminPassword(currentPassword: string, newPassword: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('admin_change_password', {
+    input_password: currentPassword,
+    new_password: newPassword,
+  })
+  if (error) throw error
+  const ok = data === true
+  if (ok) setStoredAdminPassword(newPassword)
+  return ok
 }
 
 async function submitSlotRequest(input: {
@@ -154,16 +211,32 @@ async function updateSlotRequest(input: {
   return data as SlotRequest
 }
 
+async function deleteSlotRequest(requestId: string): Promise<void> {
+  const password = requireAdminPassword()
+  const { error } = await supabase.rpc('admin_delete_slot_request', {
+    input_password: password,
+    p_request_id: requestId,
+  })
+  if (error) throw error
+}
+
 export const api = {
   getConfig,
-  getSlots,
+  getPublicProfiles,
+  getAdminProfiles,
+  saveProfile,
+  deleteProfile,
+  getPublicSlots,
+  getAdminSlotsForProfile,
   saveSlot,
   deleteSlot,
   loginAdmin,
   restoreAdminSession,
   logoutAdmin,
+  changeAdminPassword,
   submitSlotRequest,
   getAdminSlotRequests,
   reviewSlotRequest,
   updateSlotRequest,
+  deleteSlotRequest,
 }
