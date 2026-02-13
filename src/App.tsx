@@ -672,35 +672,74 @@ export function App() {
     if (!shareCardRef.current) return
     try {
       const { toBlob, toPng } = await import('html-to-image')
-      const blob = await toBlob(shareCardRef.current, {
+      const fileName = `disponibilitate-${activeProfile?.slug ?? 'view'}-${lang}.png`
+      const renderOptions = {
         cacheBust: true,
         pixelRatio: Math.max(2.5, window.devicePixelRatio || 1),
         backgroundColor: 'transparent',
-      })
-      if (blob && 'clipboard' in navigator && 'ClipboardItem' in window) {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-        setAuthInfo(t('copiedImage'))
-        window.setTimeout(() => setAuthInfo(null), 1800)
-        return
+      }
+      const blob = await toBlob(shareCardRef.current, renderOptions)
+      if (!blob) throw new Error('image_render_failed')
+
+      // Primary path: real image clipboard support (Chrome/Edge desktop, some Android browsers).
+      if ('clipboard' in navigator && 'ClipboardItem' in window) {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+          setAuthInfo(t('copiedImage'))
+          window.setTimeout(() => setAuthInfo(null), 1800)
+          return
+        } catch {
+          // Continue with cross-browser fallbacks below.
+        }
       }
 
-      // Fallback for browsers without image clipboard support.
-      const dataUrl = await toPng(shareCardRef.current, {
-        cacheBust: true,
-        pixelRatio: Math.max(2.5, window.devicePixelRatio || 1),
-        backgroundColor: 'transparent',
-      })
+      // Secondary path: native share sheet with actual image file (great on iOS/Android).
+      if (typeof navigator.share === 'function') {
+        try {
+          const file = new File([blob], fileName, { type: 'image/png' })
+          const canShareFile =
+            typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] })
+          if (canShareFile) {
+            await navigator.share({
+              title: activeProfile?.title ?? title,
+              text: selectionMessage,
+              files: [file],
+            })
+            setAuthInfo(t('copyImageShareFallback'))
+            window.setTimeout(() => setAuthInfo(null), 2200)
+            return
+          }
+        } catch {
+          // user canceled share or browser rejected; continue to next fallback
+        }
+      }
+
+      // Fallback: download (desktop friendly), then open image for manual long-press copy/save.
+      const dataUrl = await toPng(shareCardRef.current, renderOptions)
       const a = document.createElement('a')
-      a.download = `disponibilitate-${activeProfile?.slug ?? 'view'}-${lang}.png`
+      a.download = fileName
       a.href = dataUrl
       a.click()
-      setAuthInfo(t('copyImageFallback'))
+      const manualTab = window.open('', '_blank', 'noopener,noreferrer')
+      if (manualTab) {
+        const safeUrl = dataUrl.replace(/"/g, '&quot;')
+        manualTab.document.write(
+          `<meta name="viewport" content="width=device-width, initial-scale=1" />` +
+            `<title>DISPONIBILITATE</title>` +
+            `<style>body{margin:0;background:#0f172a;display:grid;place-items:center;min-height:100vh}img{max-width:100vw;max-height:100vh;display:block}</style>` +
+            `<img src="${safeUrl}" alt="share image" />`,
+        )
+        manualTab.document.close()
+        setAuthInfo(t('copyImageManual'))
+      } else {
+        setAuthInfo(t('copyImageFallback'))
+      }
       window.setTimeout(() => setAuthInfo(null), 2200)
     } catch {
       setAuthInfo(t('copyImageFailed'))
       window.setTimeout(() => setAuthInfo(null), 2200)
     }
-  }, [activeProfile?.slug, lang, t])
+  }, [activeProfile?.slug, activeProfile?.title, lang, selectionMessage, t, title])
 
   const shareNative = useCallback(async () => {
     try {
